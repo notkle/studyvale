@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyNook — Pixel Study Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+- { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+–pixel: 4px;
+–scene-bg: #1a2e4a;
+–ui-dark: #1a1a2e;
+–ui-accent: #f4c84a;
+–ui-green: #56c96e;
+–ui-blue: #5bb8f5;
+–ui-red: #e85d75;
+}
+
+body {
+background: #0d0d1a;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+min-height: 100vh;
+font-family: ‘Press Start 2P’, monospace;
+overflow: hidden;
+user-select: none;
+}
+
+/* ─── SCENE CONTAINER ─── */
+#scene {
+position: relative;
+width: 640px;
+height: 480px;
+image-rendering: pixelated;
+overflow: hidden;
+border: 4px solid #2a3a5a;
+box-shadow: 0 0 0 4px #0d0d1a, 0 0 0 8px #2a3a5a, 0 20px 60px rgba(0,0,0,0.8);
+}
+
+/* ─── BACKGROUNDS ─── */
+.bg-layer {
+position: absolute;
+inset: 0;
+opacity: 0;
+transition: opacity 0.8s ease;
+pointer-events: none;
+}
+.bg-layer.active { opacity: 1; }
+
+/* BEACH */
+#bg-beach {
+background: linear-gradient(
+180deg,
+#87ceeb 0%, #b8e4f7 35%,
+#b8e4f7 35%, #4a9eda 55%,
+#4a9eda 55%, #7ec8e3 60%,
+#f4d47a 60%, #e8c46a 75%,
+#c8956a 75%, #c8956a 100%
+);
+}
+/* Beach pixel sun */
+#bg-beach::before {
+content: ‘’;
+position: absolute;
+width: 48px; height: 48px;
+background: #f4e44a;
+top: 32px; right: 80px;
+image-rendering: pixelated;
+box-shadow:
+0 -8px 0 #f4e44a, 0 8px 0 #f4e44a,
+-8px 0 0 #f4e44a, 8px 0 0 #f4e44a,
+-8px -8px 0 #f4e44a, 8px -8px 0 #f4e44a,
+-8px 8px 0 #f4e44a, 8px 8px 0 #f4e44a,
+0 -20px 0 #f4e44a80, 0 20px 0 #f4e44a80,
+-20px 0 0 #f4e44a80, 20px 0 0 #f4e44a80;
+}
+
+/* SNOW */
+#bg-snow {
+background: linear-gradient(
+180deg,
+#2a3560 0%, #3d4f8a 30%,
+#3d4f8a 30%, #5a6fa0 50%,
+#ddeeff 50%, #eef5ff 70%,
+#c8ddf0 70%, #c8ddf0 100%
+);
+}
+/* Snow mountains */
+#bg-snow::before {
+content: ‘’;
+position: absolute;
+bottom: 180px; left: 0; right: 0;
+height: 120px;
+background:
+polygon(0% 100%, 15% 30%, 30% 100%),
+polygon(20% 100%, 40% 10%, 60% 100%),
+polygon(50% 100%, 70% 40%, 90% 100%);
+background-color: #6a7fa8;
+clip-path: polygon(0% 100%, 8% 40%, 16% 70%, 28% 20%, 40% 60%, 52% 15%, 65% 55%, 78% 30%, 90% 60%, 100% 35%, 100% 100%);
+}
+#bg-snow::after {
+content: ‘’;
+position: absolute;
+bottom: 180px; left: 0; right: 0;
+height: 60px;
+background: #d0e8ff;
+clip-path: polygon(0% 100%, 8% 20%, 16% 80%, 28% 5%, 40% 70%, 52% 0%, 65% 60%, 78% 10%, 90% 50%, 100% 15%, 100% 100%);
+}
+
+/* FIRE / CABIN */
+#bg-fire {
+background: linear-gradient(
+180deg,
+#1a0a2e 0%, #2d1548 40%,
+#2d1548 40%, #1a0a2e 60%,
+#3d1f0a 60%, #5a2e0f 80%,
+#2a1505 80%, #2a1505 100%
+);
+}
+/* Window glow */
+#bg-fire::before {
+content: ‘’;
+position: absolute;
+width: 160px; height: 120px;
+background: linear-gradient(180deg, #3d2060 0%, #2a1040 100%);
+top: 40px; left: 40px;
+border: 4px solid #5a3080;
+box-shadow: 0 0 40px #6030a040;
+}
+#bg-fire::after {
+content: ‘’;
+position: absolute;
+width: 80px; height: 80px;
+top: 60px; left: 80px;
+background: radial-gradient(circle, #f4c84a44, transparent 70%);
+animation: flicker 0.3s infinite alternate;
+}
+
+/* FOREST */
+#bg-forest {
+background: linear-gradient(
+180deg,
+#0d2015 0%, #1a3a22 45%,
+#2a5a30 45%, #2a5a30 65%,
+#1a3010 65%, #1a3010 100%
+);
+}
+
+/* ─── CANVAS ANIMATIONS ─── */
+canvas {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+pointer-events: none;
+image-rendering: pixelated;
+}
+
+/* ─── ROOM INTERIOR ELEMENTS ─── */
+.room-floor {
+position: absolute;
+bottom: 0; left: 0; right: 0;
+height: 200px;
+background: #2a1a0e;
+border-top: 4px solid #3a2510;
+}
+.room-floor::before {
+content: ‘’;
+position: absolute;
+inset: 0;
+background: repeating-linear-gradient(
+90deg,
+transparent, transparent 79px,
+#35200d 79px, #35200d 83px
+);
+opacity: 0.5;
+}
+.room-desk {
+position: absolute;
+bottom: 120px; left: 50%;
+transform: translateX(-50%);
+width: 380px; height: 24px;
+background: #6b3e1e;
+border-top: 4px solid #8a5025;
+border-bottom: 4px solid #3d1f0a;
+}
+.room-desk::before {
+content: ‘’;
+position: absolute;
+bottom: -60px; left: 20px;
+width: 16px; height: 60px;
+background: #5a3010;
+box-shadow: 324px 0 0 #5a3010;
+}
+
+/* ─── HANDS + IPAD ─── */
+#hands-container {
+position: absolute;
+bottom: -20px;
+left: 50%;
+transform: translateX(-50%);
+width: 500px;
+height: 420px;
+z-index: 10;
+}
+
+#hands-canvas {
+position: absolute;
+bottom: 0; left: 0;
+width: 500px; height: 420px;
+image-rendering: pixelated;
+z-index: 10;
+}
+
+/* iPad body */
+#ipad {
+position: absolute;
+bottom: 100px;
+left: 50%;
+transform: translateX(-50%);
+width: 340px;
+height: 260px;
+background: #1a1a2a;
+border: 6px solid #2a2a3a;
+border-radius: 16px;
+box-shadow:
+0 0 0 2px #3a3a4a,
+0 8px 32px rgba(0,0,0,0.8),
+inset 0 0 0 3px #0a0a1a;
+z-index: 11;
+}
+
+#ipad-screen {
+position: absolute;
+inset: 8px;
+background: #f5f0e8;
+border-radius: 8px;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+padding: 12px;
+}
+
+/* Notes content on iPad */
+.notes-title {
+font-family: ‘VT323’, monospace;
+font-size: 16px;
+color: #2a1a0e;
+margin-bottom: 8px;
+padding-bottom: 4px;
+border-bottom: 2px solid #c8a87a;
+letter-spacing: 1px;
+}
+.notes-line {
+font-family: ‘VT323’, monospace;
+font-size: 13px;
+color: #3a2a1a;
+line-height: 1.6;
+margin-bottom: 2px;
+opacity: 0;
+animation: fadeInLine 0.5s forwards;
+}
+.notes-line.dim { color: #8a7060; }
+.notes-line.highlight {
+color: #2a5a3a;
+background: #c8f0d080;
+padding: 0 4px;
+border-radius: 2px;
+}
+.notes-cursor {
+display: inline-block;
+width: 8px; height: 14px;
+background: #3a2a1a;
+animation: blink 1s infinite;
+vertical-align: middle;
+margin-left: 2px;
+}
+.notes-grid {
+position: absolute;
+inset: 8px;
+background: repeating-linear-gradient(
+0deg,
+transparent, transparent 22px,
+#d4c4b040 22px, #d4c4b040 23px
+);
+border-radius: 8px;
+pointer-events: none;
+}
+
+/* iPad home bar */
+#ipad::after {
+content: ‘’;
+position: absolute;
+bottom: 4px;
+left: 50%;
+transform: translateX(-50%);
+width: 80px; height: 4px;
+background: #3a3a4a;
+border-radius: 2px;
+}
+
+/* ─── HUD / SCENE SELECTOR ─── */
+#hud {
+position: absolute;
+top: 12px; left: 12px; right: 12px;
+display: flex;
+justify-content: space-between;
+align-items: flex-start;
+z-index: 20;
+}
+
+#scene-name {
+font-family: ‘Press Start 2P’, monospace;
+font-size: 7px;
+color: #f4c84a;
+text-shadow: 2px 2px 0 #000;
+background: rgba(0,0,0,0.6);
+padding: 6px 10px;
+border: 2px solid #f4c84a40;
+letter-spacing: 1px;
+}
+
+#timer-display {
+font-family: ‘Press Start 2P’, monospace;
+font-size: 9px;
+color: #56c96e;
+text-shadow: 2px 2px 0 #000;
+background: rgba(0,0,0,0.6);
+padding: 6px 10px;
+border: 2px solid #56c96e40;
+}
+
+/* ─── BOTTOM CONTROLS ─── */
+#controls {
+position: absolute;
+bottom: 12px;
+left: 50%;
+transform: translateX(-50%);
+display: flex;
+gap: 8px;
+z-index: 20;
+}
+
+.scene-btn {
+font-family: ‘Press Start 2P’, monospace;
+font-size: 6px;
+color: #ccc;
+background: rgba(0,0,0,0.7);
+border: 2px solid #444;
+padding: 6px 8px;
+cursor: pointer;
+transition: all 0.15s;
+letter-spacing: 0.5px;
+text-transform: uppercase;
+image-rendering: pixelated;
+}
+.scene-btn:hover {
+border-color: #f4c84a;
+color: #f4c84a;
+background: rgba(0,0,0,0.9);
+transform: translateY(-2px);
+box-shadow: 0 4px 0 #00000080;
+}
+.scene-btn.active {
+border-color: #f4c84a;
+color: #f4c84a;
+background: rgba(244,200,74,0.15);
+}
+
+/* ─── PIXEL ART ELEMENTS (CSS drawn) ─── */
+.pixel-tree {
+position: absolute;
+image-rendering: pixelated;
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+@keyframes flicker { from{opacity:0.7} to{opacity:1} }
+@keyframes fadeInLine { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+@keyframes sway { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
+@keyframes drift { from{transform:translateX(0)} to{transform:translateX(-640px)} }
+@keyframes float-up { 0%{transform:translateY(0);opacity:0.9} 100%{transform:translateY(-200px);opacity:0} }
+
+/* ─── MODE TOGGLE ─── */
+#mode-toggle {
+position: absolute;
+top: 12px;
+left: 50%;
+transform: translateX(-50%);
+z-index: 30;
+display: flex;
+background: rgba(0,0,0,0.75);
+border: 2px solid #333;
+overflow: hidden;
+}
+.mode-btn {
+font-family: ‘Press Start 2P’, monospace;
+font-size: 6px;
+padding: 7px 12px;
+cursor: pointer;
+border: none;
+background: transparent;
+color: #666;
+letter-spacing: 0.5px;
+transition: all 0.2s;
+}
+.mode-btn.active {
+background: rgba(86,201,110,0.2);
+color: #56c96e;
+}
+.mode-btn:first-child { border-right: 2px solid #333; }
+
+/* ─── IPAD TRANSITION ─── */
+#ipad {
+transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+opacity 0.4s ease;
+}
+#ipad.relaxed {
+transform: translateX(-50%) translateY(200px);
+opacity: 0;
+}
+
+/* ─── RELAX OVERLAY ─── */
+#relax-overlay {
+position: absolute;
+inset: 0;
+pointer-events: none;
+z-index: 5;
+opacity: 0;
+transition: opacity 1s ease;
+background: radial-gradient(ellipse at 50% 120%, rgba(255,200,80,0.08) 0%, transparent 70%);
+}
+#relax-overlay.active { opacity: 1; }
+
+/* ─── RELAX TEXT ─── */
+#relax-label {
+position: absolute;
+bottom: 52px;
+left: 50%;
+transform: translateX(-50%);
+font-family: ‘VT323’, monospace;
+font-size: 22px;
+color: #f4c84a;
+letter-spacing: 3px;
+opacity: 0;
+transition: opacity 0.6s ease 0.4s;
+text-shadow: 0 0 12px #f4c84a80;
+z-index: 20;
+white-space: nowrap;
+}
+#relax-label.visible { opacity: 1; }
+
+/* ─── SUBTITLE BAR ─── */
+#subtitle {
+margin-top: 12px;
+font-family: ‘VT323’, monospace;
+font-size: 18px;
+color: #5a6a8a;
+letter-spacing: 3px;
+text-transform: uppercase;
+}
+</style>
+
+</head>
+<body>
+
+<div id="scene">
+
+  <!-- MODE TOGGLE -->
+
+  <div id="mode-toggle">
+    <button class="mode-btn active" data-mode="study">📖 STUDY</button>
+    <button class="mode-btn" data-mode="relax">🌿 RELAX</button>
+  </div>
+
+  <!-- RELAX OVERLAY -->
+
+  <div id="relax-overlay"></div>
+  <div id="relax-label">· put it down · breathe ·</div>
+
+  <!-- BACKGROUNDS -->
+
+  <div class="bg-layer active" id="bg-beach"></div>
+  <div class="bg-layer" id="bg-snow"></div>
+  <div class="bg-layer" id="bg-fire"></div>
+  <div class="bg-layer" id="bg-forest"></div>
+
+  <!-- ANIMATED CANVAS -->
+
+<canvas id="fx-canvas" width="640" height="480"></canvas>
+
+  <!-- ROOM FURNITURE (shown for indoor scenes) -->
+
+  <div class="room-floor" id="room-floor" style="display:none"></div>
+  <div class="room-desk" id="room-desk" style="display:none"></div>
+
+  <!-- HUD -->
+
+  <div id="hud">
+    <div id="scene-name">🏖 SUNSET BEACH</div>
+    <div id="timer-display">00:00</div>
+  </div>
+
+  <!-- HANDS + IPAD -->
+
+  <div id="hands-container">
+    <canvas id="hands-canvas" width="500" height="420"></canvas>
+    <div id="ipad">
+      <div id="ipad-screen">
+        <div class="notes-grid"></div>
+        <div class="notes-title">📖 Chapter 4 — Osmosis &amp; Diffusion</div>
+        <div id="notes-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE SELECTOR -->
+
+  <div id="controls">
+    <button class="scene-btn active" data-scene="beach">🏖 Beach</button>
+    <button class="scene-btn" data-scene="snow">⛰ Snow</button>
+    <button class="scene-btn" data-scene="fire">🔥 Cabin</button>
+    <button class="scene-btn" data-scene="forest">🌲 Forest</button>
+  </div>
+
+</div>
+
+<div id="subtitle">StudyNook · v0.1 demo</div>
+
+<script>
+// ─── NOTES CONTENT ───
+const notesLines = [
+  { text: "Diffusion: movement of molecules from", cls: "" },
+  { text: "  HIGH → LOW concentration", cls: "highlight" },
+  { text: "", cls: "" },
+  { text: "Osmosis: diffusion of WATER across", cls: "" },
+  { text: "  a semipermeable membrane", cls: "highlight" },
+  { text: "", cls: "" },
+  { text: "Factors affecting rate:", cls: "" },
+  { text: "  • Temperature ↑ = rate ↑", cls: "dim" },
+  { text: "  • Concentration gradient", cls: "dim" },
+  { text: "  • Surface area", cls: "dim" },
+  { text: "  • Distance", cls: "dim" },
+  { text: "", cls: "" },
+  { text: "Isotonic / Hypotonic / Hypertonic", cls: "" },
+];
+
+function renderNotes() {
+  const container = document.getElementById('notes-content');
+  container.innerHTML = '';
+  notesLines.forEach((l, i) => {
+    const d = document.createElement('div');
+    d.className = 'notes-line ' + l.cls;
+    d.textContent = l.text || '\u00a0';
+    d.style.animationDelay = (i * 0.06) + 's';
+    container.appendChild(d);
+  });
+  const cursor = document.createElement('span');
+  cursor.className = 'notes-cursor';
+  container.lastElementChild.appendChild(cursor);
+}
+renderNotes();
+
+// ─── HANDS SPRITE CANVAS ───
+// Each hand is defined as a 2D pixel grid.
+// Colors: 0=transparent, 1=dark shadow, 2=mid skin, 3=light skin, 4=highlight, 5=nail, 6=sleeve
+const P = 5; // pixel size (5px per "pixel")
+
+const HAND_COLORS = {
+  0: null,
+  1: '#7a4020', // deep shadow
+  2: '#b86840', // base skin
+  3: '#d4885a', // mid skin
+  4: '#e8a870', // light skin
+  5: '#f0c090', // highlight
+  6: '#f8dfc0', // brightest
+  7: '#8a5030', // dark outline
+  8: '#e8d4b8', // nail
+  9: '#c87848', // knuckle shadow
+};
+
+// LEFT HAND — palm facing viewer, thumb on right side, holding left edge of iPad
+// 20 wide x 32 tall grid
+const LEFT_HAND = [
+  [0,0,0,0,0,0,7,7,7,7,7,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,7,3,3,3,3,3,7,0,0,0,0,0,0,0,0],
+  [0,0,0,0,7,4,4,5,5,4,4,3,7,0,0,0,0,0,0,0],
+  [0,0,0,7,4,5,5,6,6,5,5,4,3,7,0,0,0,0,0,0],
+  [0,0,0,7,4,5,6,6,6,6,5,4,3,7,0,0,0,0,0,0],
+  [0,0,0,7,3,4,5,5,5,5,4,3,2,7,0,0,0,0,0,0],
+  [0,0,0,7,3,3,4,4,4,4,3,3,2,7,0,0,0,0,0,0],
+  [0,0,7,2,3,3,3,3,3,3,3,2,2,1,7,0,0,0,0,0],
+  [0,7,2,2,9,3,3,3,3,3,2,2,1,1,7,0,0,0,0,0],
+  [7,2,2,2,2,9,3,3,3,2,2,1,1,1,7,0,0,0,0,0],
+  [7,2,2,2,2,2,9,3,2,2,2,1,1,7,0,0,0,0,0,0],
+  [7,1,2,2,2,2,2,2,2,2,1,1,7,0,0,0,0,0,0,0],
+  [7,1,1,2,2,2,2,2,2,1,1,7,0,0,0,0,0,0,0,0],
+  [0,7,1,1,2,2,2,2,1,1,7,0,0,0,0,0,0,0,0,0],
+  [0,0,7,1,1,1,1,1,1,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,1,1,1,1,1,1,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,2,2,2,2,2,2,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,2,2,2,2,2,2,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,2,3,3,3,3,2,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,3,3,4,4,3,3,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,3,4,4,4,4,3,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,3,4,5,5,4,3,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,3,3,4,4,3,3,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,2,3,3,3,3,2,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,2,2,2,2,2,2,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,2,2,2,2,2,2,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,7,1,2,2,2,2,1,7,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,7,1,2,2,1,7,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,7,1,1,1,1,7,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,7,2,2,2,2,7,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,7,3,3,3,3,7,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,7,7,7,7,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+// RIGHT HAND — mirrored, thumb on left side, holding right edge
+const RIGHT_HAND = LEFT_HAND.map(row => [...row].reverse());
+
+// Sleeve cuff rows appended below each hand (wrist going off screen)
+const CUFF_COLORS = ['#3a2a6a','#2a1a5a','#4a3a7a','#2a1a5a','#3a2a6a'];
+
+const hCanvas = document.getElementById('hands-canvas');
+const hCtx = hCanvas.getContext('2d');
+hCtx.imageSmoothingEnabled = false;
+
+function drawSpriteGrid(grid, ox, oy, flipX) {
+  grid.forEach((row, gy) => {
+    row.forEach((val, gx) => {
+      const color = HAND_COLORS[val];
+      if (!color) return;
+      hCtx.fillStyle = color;
+      const drawX = flipX ? ox + (row.length - 1 - gx) * P : ox + gx * P;
+      hCtx.fillRect(drawX, oy + gy * P, P, P);
+    });
+  });
+}
+
+function drawCuff(cx, cy, w) {
+  CUFF_COLORS.forEach((c, i) => {
+    hCtx.fillStyle = c;
+    hCtx.fillRect(cx, cy + i * P, w, P);
+  });
+  // Cuff highlight stripe
+  hCtx.fillStyle = '#6a5aaa40';
+  hCtx.fillRect(cx + P*2, cy, P*2, CUFF_COLORS.length * P);
+}
+
+let handBreath = 0;
+function drawHands() {
+  hCtx.clearRect(0, 0, 500, 420);
+  handBreath += 0.018;
+  const breathY = Math.sin(handBreath) * 2;
+
+  // LEFT HAND — bottom-left area, angled up holding left iPad edge
+  const lx = 10, ly = Math.round(210 + breathY);
+  drawSpriteGrid(LEFT_HAND, lx, ly, false);
+  drawCuff(lx + P*2, ly + LEFT_HAND.length * P, LEFT_HAND[0].length * P - P*4);
+
+  // RIGHT HAND — bottom-right, mirrored
+  const rx = 330, ry = Math.round(210 - breathY); // slight offset for natural asymmetry
+  drawSpriteGrid(RIGHT_HAND, rx, ry, false);
+  drawCuff(rx + P*2, ry + RIGHT_HAND.length * P, RIGHT_HAND[0].length * P - P*4);
+}
+
+// Animate hands in main loop
+function handsLoop() {
+  drawHands();
+  requestAnimationFrame(handsLoop);
+}
+handsLoop();
+
+let seconds = 0;
+setInterval(() => {
+  seconds++;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  document.getElementById('timer-display').textContent = m + ':' + s;
+}, 1000);
+
+// ─── CANVAS FX ───
+const canvas = document.getElementById('fx-canvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+let currentScene = 'beach';
+let particles = [];
+let frameCount = 0;
+
+const SCENES = {
+  beach: {
+    name: '🏖 SUNSET BEACH',
+    indoor: false,
+    init() { particles = []; },
+    update() {
+      // Waves
+      frameCount++;
+    },
+    draw() {
+      const t = frameCount;
+      // Draw pixel clouds
+      drawPixelCloud(80 + Math.sin(t*0.003)*3, 50, 0.5);
+      drawPixelCloud(300 + Math.sin(t*0.002+1)*4, 70, 0.7);
+      drawPixelCloud(500 + Math.sin(t*0.004+2)*2, 40, 0.4);
+
+      // Draw animated waves
+      for (let row = 0; row < 4; row++) {
+        const y = 263 + row * 14;
+        const speed = 0.04 + relaxLiveness * 0.04; // faster in relax
+        const offset = Math.sin(t * speed + row * 1.2) * (12 + relaxLiveness * 10);
+        ctx.fillStyle = row % 2 === 0 ? '#5ba8d880' : '#4a9eda60';
+        for (let x = 0; x < 640; x += 8) {
+          const wx = (x + offset * (row + 1)) % 640;
+          ctx.fillRect(wx, y, 8, 4);
+        }
+      }
+
+      // Palm tree (pixel art)
+      drawPalmTree(560, 230);
+
+      // Seagulls
+      drawSeagull(120 + Math.sin(t*0.015)*30, 80 + Math.sin(t*0.02)*8, t);
+      drawSeagull(200 + Math.sin(t*0.012+1)*20, 100 + Math.sin(t*0.018+1)*6, t+10);
+    }
+  },
+  snow: {
+    name: '⛰ SNOWY PEAKS',
+    indoor: false,
+    init() {
+      particles = [];
+      for (let i = 0; i < 60; i++) {
+        particles.push({
+          x: Math.random()*640,
+          y: Math.random()*480,
+          size: Math.random() < 0.5 ? 4 : 8,
+          speed: 0.3 + Math.random()*0.5,
+          drift: (Math.random()-0.5)*0.3,
+          opacity: 0.4 + Math.random()*0.5
+        });
+      }
+    },
+    update() {
+      frameCount++;
+      particles.forEach(p => {
+        p.y += p.speed * (1 + relaxLiveness * 1.2);
+        p.x += p.drift * (1 + relaxLiveness * 0.8);
+        if (p.y > 480) { p.y = -8; p.x = Math.random()*640; }
+        if (p.x > 640) p.x = 0;
+        if (p.x < 0) p.x = 640;
+      });
+    },
+    draw() {
+      // Pine trees
+      drawPineTree(50, 240, 0.8);
+      drawPineTree(120, 260, 1.0);
+      drawPineTree(540, 235, 0.9);
+      drawPineTree(600, 255, 0.75);
+
+      // Stars
+      ctx.fillStyle = '#ffffffcc';
+      const stars = [[80,40],[150,25],[300,15],[450,35],[550,20],[620,45],[30,60],[500,55]];
+      const t = frameCount;
+      stars.forEach(([sx,sy],i) => {
+        const twinkle = Math.sin(t*0.05 + i*1.7);
+        ctx.globalAlpha = 0.4 + twinkle*0.4;
+        ctx.fillRect(sx, sy, 4, 4);
+      });
+      ctx.globalAlpha = 1;
+
+      // Snow particles
+      particles.forEach(p => {
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+      });
+      ctx.globalAlpha = 1;
+    }
+  },
+  fire: {
+    name: '🔥 COZY CABIN',
+    indoor: true,
+    init() {
+      particles = [];
+      for (let i = 0; i < 20; i++) {
+        particles.push(newEmber());
+      }
+    },
+    update() {
+      frameCount++;
+      particles.forEach((p,i) => {
+        p.y -= p.speed * (1 + relaxLiveness * 1.5);
+        p.x += Math.sin(frameCount * 0.1 + i) * (0.8 + relaxLiveness * 0.8);
+        p.life--;
+        if (p.life <= 0) particles[i] = newEmber();
+      });
+    },
+    draw() {
+      const t = frameCount;
+      // Fireplace mouth
+      ctx.fillStyle = '#1a0a05';
+      ctx.fillRect(60, 290, 120, 80);
+
+      // Flame layers
+      const flames = [
+        { x:80, y:290, w:80, colors:['#f4e44a','#f4a020','#e85510'] },
+        { x:90, y:270, w:60, colors:['#f4c84a','#f48020','#c84010'] },
+        { x:100, y:255, w:40, colors:['#f4e44a','#f4a030','#e06010'] },
+      ];
+      flames.forEach(({x,y,w,colors},fi) => {
+        const flicker = Math.sin(t*0.2 + fi*2)*3;
+        const flicker2 = Math.cos(t*0.17 + fi)*2;
+        colors.forEach((c,ci) => {
+          ctx.fillStyle = c;
+          ctx.globalAlpha = 0.85 - ci*0.15;
+          const fw = w - ci*10;
+          const fh = 25 - ci*4;
+          ctx.fillRect(x + ci*5 + Math.round(flicker), y - ci*8 + Math.round(flicker2), fw, fh);
+        });
+      });
+      ctx.globalAlpha = 1;
+
+      // Fireplace surround
+      ctx.fillStyle = '#5a3520';
+      ctx.fillRect(50, 285, 10, 90); ctx.fillRect(180, 285, 10, 90);
+      ctx.fillRect(50, 278, 140, 12);
+      ctx.fillStyle = '#6a4530';
+      ctx.fillRect(40, 275, 160, 10);
+
+      // Mantle shelf decorations (pixel art)
+      ctx.fillStyle = '#f4c84a'; ctx.fillRect(60, 268, 12, 8);
+      ctx.fillStyle = '#56c96e'; ctx.fillRect(80, 266, 10, 10);
+      ctx.fillStyle = '#e85d75'; ctx.fillRect(160, 268, 12, 8);
+
+      // Glow
+      const grd = ctx.createRadialGradient(120, 300, 5, 120, 300, 150);
+      grd.addColorStop(0, 'rgba(244,180,50,0.15)');
+      grd.addColorStop(1, 'rgba(244,100,10,0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 150, 640, 480);
+
+      // Embers
+      particles.forEach(p => {
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+      });
+      ctx.globalAlpha = 1;
+
+      // Bookshelf
+      drawBookshelf(360, 220);
+
+      // Rug
+      ctx.fillStyle = '#7a2030';
+      ctx.fillRect(100, 355, 440, 20);
+      ctx.fillStyle = '#f4c84a40';
+      for(let rx=108;rx<540;rx+=16){ ctx.fillRect(rx,357,8,16); }
+      ctx.fillStyle = '#f4c84a';
+      ctx.fillRect(100,355,440,4); ctx.fillRect(100,371,440,4);
+
+      // Window stars
+      ctx.fillStyle = '#ffffff';
+      const windowStars=[[90,70],[120,55],[140,80],[160,65],[110,90]];
+      windowStars.forEach(([sx,sy],i)=>{
+        ctx.globalAlpha = 0.5+Math.sin(t*0.08+i)*0.4;
+        ctx.fillRect(sx,sy,4,4);
+      });
+      ctx.globalAlpha=1;
+    }
+  },
+  forest: {
+    name: '🌲 MISTY FOREST',
+    indoor: false,
+    init() {
+      particles = [];
+      for (let i = 0; i < 15; i++) {
+        particles.push({
+          x: Math.random()*640, y: 160+Math.random()*120,
+          size: 4+Math.floor(Math.random()*4)*4,
+          speed: 0.1+Math.random()*0.15,
+          opacity: 0.1+Math.random()*0.3,
+          drift: (Math.random()-0.5)*0.5
+        });
+      }
+    },
+    update() {
+      frameCount++;
+      particles.forEach(p => {
+        p.x += p.drift + Math.sin(frameCount*0.01)*0.2;
+        p.y += Math.sin(frameCount*0.008+p.x)*0.1;
+        if(p.x<-40) p.x=680; if(p.x>680) p.x=-40;
+      });
+    },
+    draw() {
+      const t = frameCount;
+      // Background trees
+      [60,140,220,350,430,510,590].forEach((tx,i)=>{
+        drawPixelFir(tx, 180+i%3*20, 0.5+i%4*0.15, true);
+      });
+      // Foreground trees
+      [30,170,310,450,580].forEach((tx,i)=>{
+        drawPixelFir(tx, 260+i%2*15, 0.8+i%3*0.1, false);
+      });
+      // Ground mist
+      particles.forEach(p=>{
+        ctx.globalAlpha = p.opacity * (0.6+Math.sin(t*0.02+p.x*0.01)*0.4);
+        ctx.fillStyle = '#c8d8c0';
+        ctx.fillRect(Math.round(p.x),Math.round(p.y),p.size*3,p.size);
+      });
+      ctx.globalAlpha=1;
+      // Fireflies — more visible and active in relax
+      [[200,220],[380,200],[500,240],[140,230],[460,210]].forEach(([fx,fy],i)=>{
+        const blink = Math.sin(t*0.1+i*2.3);
+        const threshold = 0.3 - relaxLiveness * 0.25;
+        if(blink>threshold){
+          ctx.globalAlpha = Math.min(1, (blink-threshold)/(0.7+relaxLiveness*0.25) * (0.8 + relaxLiveness*0.2));
+          ctx.fillStyle = i%2===0 ? '#d4f44a' : '#f4e44a';
+          ctx.fillRect(fx+Math.round(Math.sin(t*0.02+i)*8), fy+Math.round(Math.cos(t*0.015+i)*5), 4, 4);
+        }
+        ctx.globalAlpha=1;
+      });
+      // Leaves — fall faster in relax
+      const leafSpeed = 0.5 + relaxLiveness * 0.8;
+      const leafT = t * leafSpeed;
+      [80,200,320,440,560].forEach((lx,i)=>{
+        const ly = (leafT*0.4+i*100)%340 + 120;
+        const lox = Math.sin(leafT*0.03+i*1.4)*20;
+        ctx.fillStyle = i%2===0 ? '#3a8a30' : '#5aaa40';
+        ctx.fillRect(Math.round(lx+lox), Math.round(ly), 8, 8);
+      });
+    }
+  }
+};
+
+function newEmber() {
+  return {
+    x: 80+Math.random()*80, y: 310,
+    size: 4, speed: 0.5+Math.random()*1.5,
+    life: 30+Math.random()*60, maxLife: 90,
+    color: Math.random()<0.5?'#f4a030':'#f4e44a',
+    drift: (Math.random()-0.5)*2
+  };
+}
+
+// ─── PIXEL DRAWING HELPERS ───
+function drawPixelCloud(x, y, scale) {
+  const s = Math.round(scale*8);
+  ctx.fillStyle = '#ffffffc0';
+  [[0,0,3,1],[1,-1,5,1],[0,1,3,1],[-1,0,2,1],[3,0,2,1]].forEach(([dx,dy,w,h])=>{
+    ctx.fillRect(x+dx*s, y+dy*s, w*s, h*s);
+  });
+}
+
+function drawPalmTree(x, y) {
+  const t = frameCount;
+  // Trunk
+  ctx.fillStyle = '#7a5020';
+  for(let i=0;i<12;i++) ctx.fillRect(x+Math.round(Math.sin(i*0.5)*2)-4, y-i*12, 12, 12);
+  // Leaves
+  ctx.fillStyle = '#3a9030';
+  const sway = Math.sin(t*0.03)*6;
+  [[-40,-20],[40+sway,-20],[-20+sway,-40],[20,-40],[0,-50]].forEach(([lx,ly])=>{
+    ctx.fillRect(x+lx-8, y-140+ly, 24, 8);
+    ctx.fillRect(x+lx, y-132+ly, 16, 8);
+  });
+}
+
+function drawSeagull(x, y, t) {
+  const flap = Math.sin(t*0.1);
+  ctx.fillStyle = '#ffffffcc';
+  ctx.fillRect(x, y, 8, 4);
+  ctx.fillRect(x-8, y+(flap>0?4:0), 8, 4);
+  ctx.fillRect(x+8, y+(flap>0?0:4), 8, 4);
+}
+
+function drawPineTree(x, y, scale, muted) {
+  const s = Math.round(scale*4);
+  ctx.fillStyle = muted ? '#1a3a2080' : '#2a5a30';
+  [[0,-8,2,2],[-1,-6,4,2],[-2,-4,6,2],[-3,-2,8,2],[-4,0,10,2],[-5,2,12,2]].forEach(([dx,dy,w,h])=>{
+    ctx.fillRect(x+dx*s, y+dy*s, w*s, h*s);
+  });
+  ctx.fillStyle = muted ? '#3a2a1080' : '#5a3010';
+  ctx.fillRect(x-s, y+2*s, 2*s, 4*s);
+}
+
+function drawPixelFir(x, y, scale, muted) {
+  const s = Math.max(4, Math.round(scale*6));
+  ctx.fillStyle = muted ? '#1a4a2060' : '#2a6a35';
+  [[-1,-6,2,2],[-2,-4,4,2],[-3,-2,6,2],[-4,0,8,2],[-5,2,10,3]].forEach(([dx,dy,w,h])=>{
+    ctx.fillRect(x+dx*s, y+dy*s, w*s, h*s);
+  });
+  ctx.fillStyle = muted ? '#2a1a0850' : '#4a2510';
+  ctx.fillRect(x-s, y+3*s, 2*s, 4*s);
+}
+
+function drawBookshelf(x, y) {
+  ctx.fillStyle = '#5a3010';
+  ctx.fillRect(x, y, 180, 140);
+  // Shelves
+  [0,40,80,120].forEach(sy=>{
+    ctx.fillStyle = '#6a4020';
+    ctx.fillRect(x, y+sy, 180, 6);
+  });
+  // Books
+  const bookColors=['#e85d75','#5bb8f5','#56c96e','#f4c84a','#c084e0','#f4a030'];
+  let bx=x+8;
+  for(let b=0;b<14;b++){
+    const shelf=Math.floor(b/5);
+    const pos=b%5;
+    const bw=20+Math.floor(Math.random()*8)*4;
+    ctx.fillStyle=bookColors[b%bookColors.length];
+    ctx.fillRect(x+8+pos*34, y+8+shelf*40, 28, 34);
+    ctx.fillStyle='rgba(255,255,255,0.15)';
+    ctx.fillRect(x+10+pos*34, y+10+shelf*40, 4, 28);
+  }
+}
+
+// ─── MODE SYSTEM ───
+let relaxMode = false;
+let relaxLiveness = 0; // 0 = study, 1 = relax (lerped smoothly)
+
+function setMode(mode) {
+  relaxMode = (mode === 'relax');
+  const ipad = document.getElementById('ipad');
+  const overlay = document.getElementById('relax-overlay');
+  const label = document.getElementById('relax-label');
+
+  ipad.classList.toggle('relaxed', relaxMode);
+  overlay.classList.toggle('active', relaxMode);
+  label.classList.toggle('visible', relaxMode);
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Audio crossfade
+  if (relaxMode) {
+    audioEngine.crossfadeTo('relax');
+  } else {
+    audioEngine.crossfadeTo('study');
+  }
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
+// ─── AUDIO ENGINE ───
+// Scaffold — connect real .mp3/.ogg files via the src fields below
+// All gains are 0 until files are loaded; structure is complete
+const audioEngine = (() => {
+  let ctx;
+  const layers = {};
+  let ready = false;
+
+  // Define layers per scene + mode
+  // Replace '' with actual audio file URLs when available
+  const AUDIO_MAP = {
+    beach: {
+      study: { src: '', baseGain: 0.5, label: 'gentle waves' },
+      relax: { src: '', baseGain: 0.85, label: 'full surf + breeze' },
+    },
+    snow: {
+      study: { src: '', baseGain: 0.4, label: 'soft wind' },
+      relax: { src: '', baseGain: 0.75, label: 'wind + deep silence' },
+    },
+    fire: {
+      study: { src: '', baseGain: 0.5, label: 'low crackle' },
+      relax: { src: '', baseGain: 0.9, label: 'full crackle + pop' },
+    },
+    forest: {
+      study: { src: '', baseGain: 0.45, label: 'distant birds' },
+      relax: { src: '', baseGain: 0.8, label: 'full forest ambience' },
+    },
+  };
+
+  function init() {
+    if (ready) return;
+    try {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ready = true;
+    } catch(e) {
+      console.warn('Web Audio not available');
+    }
+  }
+
+  function crossfadeTo(mode) {
+    // When real audio files are connected, this will:
+    // 1. Ramp down current gain over 1.2s
+    // 2. Ramp up target gain over 1.2s
+    // For now logs the intent clearly
+    const scene = currentScene || 'beach';
+    const target = AUDIO_MAP[scene]?.[mode];
+    if (target) {
+      console.log(`[Audio] ${scene} / ${mode} → "${target.label}" @ gain ${target.baseGain}`);
+    }
+  }
+
+  function onSceneChange(scene) {
+    const mode = relaxMode ? 'relax' : 'study';
+    crossfadeTo(mode);
+  }
+
+  return { init, crossfadeTo, onSceneChange };
+})();
+
+// Init audio on first user gesture
+document.getElementById('scene').addEventListener('click', () => audioEngine.init(), { once: true });
+
+// ─── SCENE SWITCH ───
+function switchScene(name) {
+  currentScene = name;
+  const scene = SCENES[name];
+  frameCount = 0;
+  scene.init();
+
+  // Toggle bg layers
+  document.querySelectorAll('.bg-layer').forEach(el=>{
+    el.classList.toggle('active', el.id === 'bg-'+name);
+  });
+  // Toggle indoor elements
+  const indoor = scene.indoor;
+  document.getElementById('room-floor').style.display = indoor ? 'block' : 'none';
+  document.getElementById('room-desk').style.display = indoor ? 'block' : 'none';
+
+  // Update scene name
+  document.getElementById('scene-name').textContent = scene.name;
+
+  // Notify audio engine
+  audioEngine.onSceneChange(name);
+
+  // Update buttons
+  document.querySelectorAll('.scene-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.scene === name);
+  });
+}
+
+// ─── BUTTONS ───
+document.querySelectorAll('.scene-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchScene(btn.dataset.scene));
+});
+
+// ─── MAIN LOOP ───
+SCENES.beach.init();
+function loop() {
+  // Smoothly lerp liveness toward target
+  const liveTarget = relaxMode ? 1 : 0;
+  relaxLiveness += (liveTarget - relaxLiveness) * 0.03;
+
+  ctx.clearRect(0, 0, 640, 480);
+  const scene = SCENES[currentScene];
+  scene.update();
+  scene.draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
